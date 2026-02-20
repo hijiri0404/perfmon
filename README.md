@@ -1,6 +1,6 @@
 # perfmon — Linux システムパフォーマンス監視ツール
 
-Linux (RHEL) 上で CPU/メモリ/ディスクIO などのシステム負荷をプロセス単位含め時系列で記録する常駐ツール。
+Linux (RHEL) 上で CPU/メモリ/ディスクIO/ネットワークなどのシステム負荷をプロセス単位含め時系列で記録する常駐ツール。
 RPMパッケージとして配布可能。
 
 ## ファイル構成
@@ -11,7 +11,7 @@ perfmon/
 ├── perfmon.spec               # RPM SPECファイル
 ├── perfmon-design.md          # 詳細設計ドキュメント（引き継ぎ用）
 └── SOURCES/
-    ├── perfmon-collector.sh   # 収集スクリプト本体（vmstat/iostat/pidstat）
+    ├── perfmon-collector.sh   # 収集スクリプト本体
     ├── perfmon-save.sh        # ログzip圧縮コマンド
     ├── perfmon.conf           # 設定ファイル
     └── perfmon.service        # systemd ユニットファイル
@@ -34,23 +34,24 @@ mkdir -p ~/rpmbuild/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
 # 3. ソースファイルをコピー
 cp SOURCES/* ~/rpmbuild/SOURCES/
+cp perfmon.spec ~/rpmbuild/SPECS/
 
 # 4. RPM ビルド
-rpmbuild -bb perfmon.spec
+rpmbuild -bb ~/rpmbuild/SPECS/perfmon.spec
 ```
 
-成果物: `~/rpmbuild/RPMS/noarch/perfmon-1.0.0-1.*.noarch.rpm`
+成果物: `~/rpmbuild/RPMS/noarch/perfmon-1.1.0-1.*.noarch.rpm`
 
 ## インストール・運用
 
 ```bash
 # インストール（依存パッケージも自動解決）
-sudo yum localinstall ~/rpmbuild/RPMS/noarch/perfmon-1.0.0-1.*.noarch.rpm
+sudo yum localinstall ~/rpmbuild/RPMS/noarch/perfmon-1.1.0-1.*.noarch.rpm
 
 # 稼働確認
 systemctl status perfmon
 
-# ログ確認（1分後に生成される）
+# ログ確認（1分後に実データが記録される）
 ls -la /opt/perfmon/log/
 
 # ログをzip保存
@@ -76,24 +77,38 @@ sudo yum remove perfmon
 
 | ログファイル | コマンド | 内容 |
 |---|---|---|
-| vmstat_YYYYMMDD.log | `vmstat` | CPU/メモリ/swap/IO 全体統計 |
+| vmstat_YYYYMMDD.log | `vmstat -n` | CPU/メモリ/swap/IO 全体統計。カラムヘッダー付き |
 | iostat_YYYYMMDD.log | `iostat -dxkt` | デバイス単位のディスクIO統計 |
 | pidstat_YYYYMMDD.log | `pidstat -u -r -d` | プロセス単位のCPU/メモリ/ディスクIO |
+| mpstat_YYYYMMDD.log | `mpstat -P ALL` | CPU コア別使用率 |
+| sar_net_YYYYMMDD.log | `sar -n DEV` | ネットワークインタフェース統計 |
+| top_YYYYMMDD.log | `top -b` | システム概要とプロセス一覧（スナップショット形式） |
 
-全行にタイムスタンプ付与。日付変更時にファイル自動切り替え。
+全行に収集タイムスタンプを付与。起動直後の起動時平均（since boot）は除外し、最初の計測区間から記録する。日付変更時にファイル自動切り替え。
+
+### pidstat のタイムスタンプについて
+
+pidstat ログの各行には収集タイムスタンプ（gawk付与）と pidstat 内部タイムスタンプの2つが含まれる。
+
+```
+2026-02-20 22:26:24  22:25:24  UID  PID  ...  ← ヘッダー（内部TSは区間開始時刻）
+2026-02-20 22:26:24  22:26:24    0    1  ...  ← データ（内部TSは区間終了時刻）
+```
+
+ヘッダーの内部タイムスタンプが区間開始、データ行が区間終了を示すため、1分ずれるのは正常な仕様。
 
 ## 開発経緯メモ
 
-- Ubuntu 22.04 上で開発・ビルド検証を実施
-- `%{_unitdir}` マクロが Ubuntu の rpm では未定義だったため、systemd パスを `/usr/lib/systemd/system` に直接指定
+- AlmaLinux 10 上でビルド・動作確認済み
+- `%{_unitdir}` マクロが一部環境で未定義のため、systemd パスを `/usr/lib/systemd/system` に直接指定
 - `%systemd_post` 等のマクロも同様に直接 systemctl コマンドに置換
-- RHEL 上での RPM ビルド・インストール・動作確認は未実施（次のステップ）
 
-## 検証チェックリスト（RHEL上で実施）
+## 検証チェックリスト
 
-- [ ] `rpmbuild -bb perfmon.spec` でビルド成功
-- [ ] `yum localinstall` でインストール → サービス自動起動
-- [ ] `systemctl status perfmon` で稼働確認
-- [ ] 1分後にログファイルが生成されている
-- [ ] `perfmon-save` でzipファイル生成
+- [x] `rpmbuild -bb perfmon.spec` でビルド成功
+- [x] `yum localinstall` でインストール → サービス自動起動
+- [x] `systemctl status perfmon` で稼働確認
+- [x] 1分後にログファイル（6種）が生成されている
+- [x] 起動時平均が除外され、計測区間データのみ記録されている
+- [x] `perfmon-save` でzipファイル生成（6ファイル収録）
 - [ ] `yum remove perfmon` でクリーンにアンインストール
