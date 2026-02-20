@@ -23,6 +23,17 @@ perfmon/
 - 必要パッケージ: `sysstat`, `gawk`, `zip`（RPM依存関係で自動インストール）
 - ビルド時: `rpm-build`
 
+## インストール（ビルド済みRPM）
+
+GitHub Releases からビルド済み RPM を直接インストールできる。
+
+```bash
+curl -LO https://github.com/hijiri0404/perfmon/releases/download/v1.1.0/perfmon-1.1.0-1.el10.noarch.rpm
+sudo yum localinstall -y perfmon-1.1.0-1.el10.noarch.rpm
+```
+
+> **注意**: el10 ビルドは AlmaLinux/RHEL 10 向け。他のバージョンはソースから RPM を再ビルドすること。
+
 ## RPM ビルド手順（RHEL上で実施）
 
 ```bash
