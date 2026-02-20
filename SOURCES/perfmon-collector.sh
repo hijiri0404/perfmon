@@ -52,7 +52,7 @@ start_vmstat() {
 start_iostat() {
     local date_suffix=$1
     iostat -dxkt "$INTERVAL" | gawk '
-        /^[a-zA-Z]/ && !/^Linux/ && !/^Device/ { next }
+        /^[A-Z]/ && !/^Linux/ && !/^Device/ { next }
         /^Device/ {
             print strftime("%Y-%m-%d %H:%M:%S"), $0
             fflush()
@@ -74,6 +74,7 @@ start_pidstat() {
         /^ *[0-9]/ {
             print strftime("%Y-%m-%d %H:%M:%S"), $0
             fflush()
+            next
         }
         /^Linux/ { next }
         /Average/ { next }
