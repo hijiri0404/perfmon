@@ -28,8 +28,8 @@ perfmon/
 GitHub Releases からビルド済み RPM を直接インストールできる。
 
 ```bash
-curl -LO https://github.com/hijiri0404/perfmon/releases/download/v1.1.0/perfmon-1.1.0-1.el10.noarch.rpm
-sudo yum localinstall -y perfmon-1.1.0-1.el10.noarch.rpm
+curl -LO https://github.com/hijiri0404/perfmon/releases/download/v1.2.0/perfmon-1.2.0-1.el10.noarch.rpm
+sudo yum localinstall -y perfmon-1.2.0-1.el10.noarch.rpm
 ```
 
 > **注意**: el10 ビルドは AlmaLinux/RHEL 10 向け。他のバージョンはソースから RPM を再ビルドすること。
@@ -51,13 +51,13 @@ cp perfmon.spec ~/rpmbuild/SPECS/
 rpmbuild -bb ~/rpmbuild/SPECS/perfmon.spec
 ```
 
-成果物: `~/rpmbuild/RPMS/noarch/perfmon-1.1.0-1.*.noarch.rpm`
+成果物: `~/rpmbuild/RPMS/noarch/perfmon-1.2.0-1.*.noarch.rpm`
 
 ## インストール・運用
 
 ```bash
 # インストール（依存パッケージも自動解決）
-sudo yum localinstall ~/rpmbuild/RPMS/noarch/perfmon-1.1.0-1.*.noarch.rpm
+sudo yum localinstall ~/rpmbuild/RPMS/noarch/perfmon-1.2.0-1.*.noarch.rpm
 
 # 稼働確認
 systemctl status perfmon
@@ -94,6 +94,12 @@ sudo yum remove perfmon
 | mpstat_YYYYMMDD.log | `mpstat -P ALL` | CPU コア別使用率 |
 | sar_net_YYYYMMDD.log | `sar -n DEV` | ネットワークインタフェース統計 |
 | top_YYYYMMDD.log | `top -b` | システム概要とプロセス一覧（スナップショット形式） |
+| meminfo_YYYYMMDD.log | `/proc/meminfo` | 詳細メモリ情報（Slab/HugePages/Dirty/CommitLimit 等） |
+| netstat_YYYYMMDD.log | `ss -s` | TCP接続状態サマリ（estab/timewait/orphaned 等） |
+| df_YYYYMMDD.log | `df -hP` / `df -iP` | ファイルシステム別ディスク容量・inode使用率 |
+| fdcount_YYYYMMDD.log | `/proc/sys/fs/file-nr` | システム全体のファイルディスクリプタ数 |
+| dstate_YYYYMMDD.log | `ps` D状態フィルタ | D状態プロセス（PID/PPID/wchan 付き） |
+| dmesg_YYYYMMDD.log | `dmesg -w` | カーネルメッセージ（OOM/ディスクエラー/HW障害） |
 
 全行に収集タイムスタンプを付与。起動直後の起動時平均（since boot）は除外し、最初の計測区間から記録する。日付変更時にファイル自動切り替え。
 
@@ -119,7 +125,8 @@ pidstat ログの各行には収集タイムスタンプ（gawk付与）と pids
 - [x] `rpmbuild -bb perfmon.spec` でビルド成功
 - [x] `yum localinstall` でインストール → サービス自動起動
 - [x] `systemctl status perfmon` で稼働確認
-- [x] 1分後にログファイル（6種）が生成されている
+- [x] 1分後にログファイル（12種）が生成されている
 - [x] 起動時平均が除外され、計測区間データのみ記録されている
-- [x] `perfmon-save` でzipファイル生成（6ファイル収録）
+- [x] `perfmon-save` でzipファイル生成
+- [x] 日付変更時に新しいファイルへ切り替わる（日付ローテーション）
 - [ ] `yum remove perfmon` でクリーンにアンインストール

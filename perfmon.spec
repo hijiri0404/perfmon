@@ -1,5 +1,5 @@
 Name:           perfmon
-Version:        1.1.0
+Version:        1.2.0
 Release:        1%{?dist}
 Summary:        System performance monitor (CPU/Memory/Disk IO/Network)
 License:        MIT
@@ -8,8 +8,8 @@ Requires:       sysstat gawk zip
 
 %description
 perfmon is a lightweight system performance monitoring tool that records
-CPU, memory, and disk IO metrics per-process using vmstat, iostat, and pidstat.
-Logs are stored with timestamps and automatically rotated.
+CPU, memory, disk IO, network, and kernel metrics with per-process granularity.
+All log entries are prefixed with timestamps and automatically rotated daily.
 
 %prep
 # no source tarball; files provided directly
@@ -52,6 +52,19 @@ systemctl disable perfmon.service >/dev/null 2>&1 || :
 systemctl daemon-reload >/dev/null 2>&1 || :
 
 %changelog
+* Sat Feb 21 2026 hijiri - 1.2.0-1
+- Fix: date rotation deadlock caused by parent shell holding pipe read-end fd
+  (stop_collectors now uses pkill -P $$ to terminate all child processes)
+- Fix: top log now prefixes each line with timestamp (consistent with other logs)
+- Add meminfo collector (/proc/meminfo: Slab, HugePages, Dirty, CommitLimit, etc.)
+- Add netstat collector (ss -s: TCP connection state summary)
+- Add df collector (disk capacity and inode usage per filesystem)
+- Add fdcount collector (/proc/sys/fs/file-nr: system-wide fd count)
+- Add dstate collector (D-state processes with PID/PPID/wchan for I/O hang diagnosis)
+- Add dmesg collector (kernel messages via dmesg -w: OOM, disk errors, hw faults)
+- Add log compression: rotated logs are gzip-compressed on date change and startup
+- Update perfmon-save to include both .log and .log.gz files
+
 * Fri Feb 20 2026 hijiri - 1.1.0-1
 - Skip boot average (first report) for vmstat/iostat/pidstat/mpstat/sar
 - Add vmstat column header to log output

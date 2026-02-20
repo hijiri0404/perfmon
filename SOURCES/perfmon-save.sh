@@ -16,9 +16,9 @@ HOSTNAME_SHORT=$(hostname -s)
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 OUTFILE="/tmp/perfmon_${HOSTNAME_SHORT}_${TIMESTAMP}.zip"
 
-# ログファイルが存在するか確認
+# .log（当日収集中）と .log.gz（ローテート済み圧縮）の両方を収集する
 shopt -s nullglob
-logs=("$LOG_DIR"/*.log)
+logs=("$LOG_DIR"/*.log "$LOG_DIR"/*.log.gz)
 shopt -u nullglob
 
 if [[ ${#logs[@]} -eq 0 ]]; then
