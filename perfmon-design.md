@@ -37,6 +37,7 @@ Linux (RHEL) 上で CPU/メモリ/ディスクIO/ネットワークなどのシ�
 | パラメータ | デフォルト | 説明 |
 |---|---|---|
 | INTERVAL | 60 | 収集間隔（秒） |
+| LSOF_INTERVAL | 300 | lsof 収集間隔（秒）。出力が大きいため INTERVAL より長い値を推奨 |
 | RETENTION_DAYS | 7 | ログ保持日数 |
 | LOG_DIR | /opt/perfmon/log | ログ出力先 |
 
@@ -243,13 +244,13 @@ cp perfmon.spec ~/rpmbuild/SPECS/
 rpmbuild -bb ~/rpmbuild/SPECS/perfmon.spec
 ```
 
-ビルド成果物は `~/rpmbuild/RPMS/noarch/perfmon-1.3.1-1.*.noarch.rpm` に出力される。
+ビルド成果物は `~/rpmbuild/RPMS/noarch/perfmon-1.3.2-1.*.noarch.rpm` に出力される。
 
 ## インストール・アンインストール
 
 ```bash
 # インストール
-sudo yum localinstall ~/rpmbuild/RPMS/noarch/perfmon-1.3.1-1.*.noarch.rpm
+sudo yum localinstall ~/rpmbuild/RPMS/noarch/perfmon-1.3.2-1.*.noarch.rpm
 
 # 稼働確認
 systemctl status perfmon

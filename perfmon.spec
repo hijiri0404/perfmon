@@ -1,5 +1,5 @@
 Name:           perfmon
-Version:        1.3.1
+Version:        1.3.2
 Release:        1%{?dist}
 Summary:        System performance monitor (CPU/Memory/Disk IO/Network)
 License:        MIT
@@ -54,6 +54,10 @@ fi
 systemctl daemon-reload >/dev/null 2>&1 || :
 
 %changelog
+* Sat Feb 21 2026 hijiri - 1.3.2-1
+- Add LSOF_INTERVAL parameter to perfmon.conf (default: 300s)
+  lsof collection interval is now independent from INTERVAL
+
 * Sat Feb 21 2026 hijiri - 1.3.1-1
 - Fix: %preun now only stops/disables service on removal, not on upgrade
   (previously %preun ran unconditionally, stopping the service just started by %post)

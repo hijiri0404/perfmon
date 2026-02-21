@@ -28,8 +28,8 @@ perfmon/
 GitHub Releases からビルド済み RPM を直接インストールできる。
 
 ```bash
-curl -LO https://github.com/hijiri0404/perfmon/releases/download/v1.3.1/perfmon-1.3.1-1.el10.noarch.rpm
-sudo yum localinstall -y perfmon-1.3.1-1.el10.noarch.rpm
+curl -LO https://github.com/hijiri0404/perfmon/releases/download/v1.3.2/perfmon-1.3.2-1.el10.noarch.rpm
+sudo yum localinstall -y perfmon-1.3.2-1.el10.noarch.rpm
 ```
 
 > **注意**: el10 ビルドは AlmaLinux/RHEL 10 向け。他のバージョンはソースから RPM を再ビルドすること。
@@ -51,13 +51,13 @@ cp perfmon.spec ~/rpmbuild/SPECS/
 rpmbuild -bb ~/rpmbuild/SPECS/perfmon.spec
 ```
 
-成果物: `~/rpmbuild/RPMS/noarch/perfmon-1.3.1-1.*.noarch.rpm`
+成果物: `~/rpmbuild/RPMS/noarch/perfmon-1.3.2-1.*.noarch.rpm`
 
 ## インストール・運用
 
 ```bash
 # インストール（依存パッケージも自動解決）
-sudo yum localinstall ~/rpmbuild/RPMS/noarch/perfmon-1.3.1-1.*.noarch.rpm
+sudo yum localinstall ~/rpmbuild/RPMS/noarch/perfmon-1.3.2-1.*.noarch.rpm
 
 # 稼働確認
 systemctl status perfmon
@@ -78,6 +78,7 @@ sudo yum remove perfmon
 | パラメータ | デフォルト | 説明 |
 |---|---|---|
 | INTERVAL | 60 | 収集間隔（秒） |
+| LSOF_INTERVAL | 300 | lsof 収集間隔（秒）。出力が大きいため INTERVAL より長い値を推奨 |
 | RETENTION_DAYS | 7 | ログ保持日数（超過分は自動削除） |
 | LOG_DIR | /opt/perfmon/log | ログ出力先 |
 

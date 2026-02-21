@@ -8,6 +8,7 @@ if [[ -f "$CONF" ]]; then
     . "$CONF"
 fi
 INTERVAL="${INTERVAL:-60}"
+LSOF_INTERVAL="${LSOF_INTERVAL:-300}"
 RETENTION_DAYS="${RETENTION_DAYS:-7}"
 LOG_DIR="${LOG_DIR:-/opt/perfmon/log}"
 
@@ -301,7 +302,7 @@ start_lsof() {
         lsof -n -P 2>/dev/null | gawk -v ts="$(date '+%Y-%m-%d %H:%M:%S')" \
             'NF > 0 {print ts, $0; fflush()}'
         echo ""
-        sleep "$INTERVAL"
+        sleep "$LSOF_INTERVAL"
     done >> "${LOG_DIR}/lsof_${date_suffix}.log" &
     CHILD_PIDS+=($!)
 }
