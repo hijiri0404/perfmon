@@ -91,7 +91,7 @@ start_iostat() {
 # 一致する間（起動時平均）はスキップし、差異が生じた時点から記録する
 start_pidstat() {
     local date_suffix=$1
-    pidstat -u -r -d "$INTERVAL" | gawk '
+    pidstat -u -r -d -l "$INTERVAL" | gawk '
         BEGIN { pending_hdr = ""; hdr_ts = ""; boot_avg = 1 }
         /^#/ || /^$/ { next }
         /^ *[0-9]/ {
@@ -181,9 +181,10 @@ start_sar() {
 }
 
 # top 収集（バッチモード、各行にタイムスタンプを付与）
+# -c でフルコマンドパス+引数を表示、-w 512 で行幅を広げて切り捨てを防ぐ
 start_top() {
     local date_suffix=$1
-    top -b -d "$INTERVAL" | gawk '
+    top -b -c -w 512 -d "$INTERVAL" | gawk '
         /^top - / {
             if (NR > 1) print ""
             ts = strftime("%Y-%m-%d %H:%M:%S")
@@ -267,11 +268,41 @@ start_dstate() {
     echo "$(date '+%Y-%m-%d %H:%M:%S') PID PPID STAT WCHAN               COMMAND" \
         >> "${LOG_DIR}/dstate_${date_suffix}.log"
     while true; do
-        ps -eo pid,ppid,stat,wchan:20,comm 2>/dev/null | \
+        ps -eo pid,ppid,stat,wchan:20,args 2>/dev/null | \
             gawk -v ts="$(date '+%Y-%m-%d %H:%M:%S')" \
             'NR > 1 && $3 ~ /^D/ {print ts, $0; fflush()}'
         sleep "$INTERVAL"
     done >> "${LOG_DIR}/dstate_${date_suffix}.log" &
+    CHILD_PIDS+=($!)
+}
+
+# connections 収集（TCP/UDP全ソケット一覧+プロセス名・PID）
+# -a: 全ステート（LISTEN/ESTAB/TIME_WAIT等）  -t: TCP  -u: UDP
+# -n: 名前解決しない  -p: プロセス情報付与
+# LISTENポートと利用プロセス、ESTABLISHEDの接続先を一括で把握できる。
+start_connections() {
+    local date_suffix=$1
+    while true; do
+        ss -tunap | gawk -v ts="$(date '+%Y-%m-%d %H:%M:%S')" \
+            'NF > 0 {print ts, $0; fflush()}'
+        echo ""
+        sleep "$INTERVAL"
+    done >> "${LOG_DIR}/connections_${date_suffix}.log" &
+    CHILD_PIDS+=($!)
+}
+
+# lsof 収集（プロセス別オープンファイル一覧）
+# "too many open files" 障害の原因プロセス特定、ロック中ファイルの確認、
+# 削除済みファイルを保持しているプロセスの発見などに使用する。
+# -n: DNS逆引きしない  -P: ポート番号を名前解決しない
+start_lsof() {
+    local date_suffix=$1
+    while true; do
+        lsof -n -P 2>/dev/null | gawk -v ts="$(date '+%Y-%m-%d %H:%M:%S')" \
+            'NF > 0 {print ts, $0; fflush()}'
+        echo ""
+        sleep "$INTERVAL"
+    done >> "${LOG_DIR}/lsof_${date_suffix}.log" &
     CHILD_PIDS+=($!)
 }
 
@@ -314,8 +345,10 @@ start_collectors() {
     start_netstat  "$date_suffix"
     start_df       "$date_suffix"
     start_fdcount  "$date_suffix"
-    start_dstate   "$date_suffix"
-    start_dmesg    "$date_suffix"
+    start_dstate       "$date_suffix"
+    start_connections  "$date_suffix"
+    start_lsof         "$date_suffix"
+    start_dmesg        "$date_suffix"
 }
 
 # --- メインループ ---

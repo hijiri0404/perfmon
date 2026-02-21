@@ -1,10 +1,10 @@
 Name:           perfmon
-Version:        1.2.0
+Version:        1.3.0
 Release:        1%{?dist}
 Summary:        System performance monitor (CPU/Memory/Disk IO/Network)
 License:        MIT
 BuildArch:      noarch
-Requires:       sysstat gawk zip
+Requires:       sysstat gawk zip lsof
 
 %description
 perfmon is a lightweight system performance monitoring tool that records
@@ -52,6 +52,14 @@ systemctl disable perfmon.service >/dev/null 2>&1 || :
 systemctl daemon-reload >/dev/null 2>&1 || :
 
 %changelog
+* Sat Feb 21 2026 hijiri - 1.3.0-1
+- top: add -c (full command path + args) and -w 512 (prevent line truncation)
+- pidstat: add -l (full command line with arguments)
+- dstate: use ps args instead of comm (full command path + arguments)
+- Add connections collector (ss -tunap: all sockets with process info incl. LISTEN)
+- Add lsof collector (lsof -n -P: open files per process)
+- Add lsof to RPM Requires
+
 * Sat Feb 21 2026 hijiri - 1.2.0-1
 - Fix: date rotation deadlock caused by parent shell holding pipe read-end fd
   (stop_collectors now uses pkill -P $$ to terminate all child processes)

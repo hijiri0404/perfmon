@@ -21,6 +21,8 @@ Linux (RHEL) 上で CPU/メモリ/ディスクIO/ネットワークなどのシ�
     df_YYYYMMDD.log        # ディスク容量・inode使用率ログ
     fdcount_YYYYMMDD.log   # ファイルディスクリプタ数ログ
     dstate_YYYYMMDD.log    # D状態プロセスログ
+    connections_YYYYMMDD.log # TCP/UDP全ソケット一覧ログ
+    lsof_YYYYMMDD.log      # プロセス別オープンファイルログ
     dmesg_YYYYMMDD.log     # カーネルメッセージログ
 /etc/perfmon/
   perfmon.conf             # 設定ファイル
@@ -62,6 +64,7 @@ Linux (RHEL) 上で CPU/メモリ/ディスクIO/ネットワークなどのシ�
 | id | アイドルCPU% |
 | wa | IO待ちCPU% |
 | st | steal CPU% |
+| gu | guest nice CPU% |
 
 ### iostat（iostat_YYYYMMDD.log）
 `iostat -dxkt INTERVAL` で拡張統計をデバイス単位で記録。各行にタイムスタンプを付与。
@@ -70,22 +73,35 @@ Linux (RHEL) 上で CPU/メモリ/ディスクIO/ネットワークなどのシ�
 |---|---|
 | Device | デバイス名 |
 | r/s | 読み取りリクエスト/秒 |
-| w/s | 書き込みリクエスト/秒 |
 | rkB/s | 読み取りKB/秒 |
-| wkB/s | 書き込みKB/秒 |
 | rrqm/s | 読み取りマージリクエスト/秒 |
-| wrqm/s | 書き込みマージリクエスト/秒 |
+| %rrqm | マージ率% |
 | r_await | 平均読み取りIO待ち時間(ms) |
+| rareq-sz | 平均読み取りリクエストサイズ(KB) |
+| w/s | 書き込みリクエスト/秒 |
+| wkB/s | 書き込みKB/秒 |
+| wrqm/s | 書き込みマージリクエスト/秒 |
+| %wrqm | 書き込みマージ率% |
 | w_await | 平均書き込みIO待ち時間(ms) |
+| wareq-sz | 平均書き込みリクエストサイズ(KB) |
+| d/s | discard リクエスト/秒 |
+| dkB/s | discard KB/秒 |
+| drqm/s | discard マージリクエスト/秒 |
+| %drqm | discard マージ率% |
+| d_await | 平均discard IO待ち時間(ms) |
+| dareq-sz | 平均discardリクエストサイズ(KB) |
+| f/s | flush リクエスト/秒 |
+| f_await | 平均flush待ち時間(ms) |
 | aqu-sz | 平均キュー長 |
 | %util | デバイス使用率% |
 
 ### pidstat（pidstat_YYYYMMDD.log）
-`pidstat -u -r -d INTERVAL` でプロセス単位のCPU/メモリ/ディスクIOを記録。
+`pidstat -u -r -d -l INTERVAL` でプロセス単位のCPU/メモリ/ディスクIOを記録。`-l` でフルコマンドパス+引数を表示する。
 
 - **-u**: CPU使用率（%usr, %system, %guest, %wait, %CPU）
 - **-r**: メモリ使用率（minflt/s, majflt/s, VSZ, RSS, %MEM）
 - **-d**: ディスクIO（kB_rd/s, kB_wr/s, kB_ccwr/s, iodelay）
+- **-l**: フルコマンドライン（パス+引数）を表示
 
 **タイムスタンプについて**: 各行には収集タイムスタンプ（gawk付与）と pidstat 内部タイムスタンプの2つが含まれる。pidstat はヘッダーを区間開始時刻、データ行を区間終了時刻で出力するため、1分ずれるのは正常な仕様。
 
@@ -102,10 +118,14 @@ Linux (RHEL) 上で CPU/メモリ/ディスクIO/ネットワークなどのシ�
 |---|---|
 | CPU | コア番号（all=全体） |
 | %usr | ユーザーCPU% |
+| %nice | nice付きユーザーCPU% |
 | %sys | システムCPU% |
 | %iowait | IO待ちCPU% |
 | %irq | ハードウェア割り込みCPU% |
 | %soft | ソフトウェア割り込みCPU% |
+| %steal | steal CPU% |
+| %guest | ゲストCPU% |
+| %gnice | nice付きゲストCPU% |
 | %idle | アイドルCPU% |
 
 ### sar（sar_net_YYYYMMDD.log）
@@ -118,10 +138,13 @@ Linux (RHEL) 上で CPU/メモリ/ディスクIO/ネットワークなどのシ�
 | txpck/s | 送信パケット/秒 |
 | rxkB/s | 受信KB/秒 |
 | txkB/s | 送信KB/秒 |
+| rxcmp/s | 受信圧縮パケット/秒 |
+| txcmp/s | 送信圧縮パケット/秒 |
+| rxmcst/s | 受信マルチキャストパケット/秒 |
 | %ifutil | インタフェース使用率% |
 
 ### top（top_YYYYMMDD.log）
-`top -b -d INTERVAL` でシステム概要とプロセス一覧をスナップショット形式で記録。他のログと同様に各行の先頭にタイムスタンプを付与する。スナップショット間は空行で区切る。
+`top -b -c -w 512 -d INTERVAL` でシステム概要とプロセス一覧をスナップショット形式で記録。`-c` でフルコマンドパス+引数を表示し、`-w 512` で行幅を広げて切り捨てを防ぐ。他のログと同様に各行の先頭にタイムスタンプを付与する。スナップショット間は空行で区切る。
 
 ### meminfo（meminfo_YYYYMMDD.log）
 `/proc/meminfo` を INTERVAL 秒ごとに読み取り全行にタイムスタンプを付与して記録する。vmstat では取得できない詳細項目（Slab/HugePages/Dirty/CommitLimit 等）を補完する。スナップショット間は空行で区切る。
@@ -136,7 +159,36 @@ Linux (RHEL) 上で CPU/メモリ/ディスクIO/ネットワークなどのシ�
 `/proc/sys/fs/file-nr` を INTERVAL 秒ごとに読み取り、システム全体の fd 使用数・最大数を記録する。先頭行にカラムヘッダー（`allocated unused max_open`）を出力する。
 
 ### dstate（dstate_YYYYMMDD.log）
-`ps -eo pid,ppid,stat,wchan:20,comm` をフィルタリングし D 状態（uninterruptible sleep）のプロセスのみを記録する。top と同じ 60 秒間隔のスナップショットだが、D 状態プロセスのみを専用ファイルに集約することで障害調査時に即座に参照できる。`wchan` でどのカーネル関数で待機中かも記録するため、NFS 待機・ジャーナルコミット待機等の原因特定に活用できる。先頭行にカラムヘッダーを出力する。
+`ps -eo pid,ppid,stat,wchan:20,args` をフィルタリングし D 状態（uninterruptible sleep）のプロセスのみを記録する。top と同じ 60 秒間隔のスナップショットだが、D 状態プロセスのみを専用ファイルに集約することで障害調査時に即座に参照できる。`wchan` でどのカーネル関数で待機中かも記録するため、NFS 待機・ジャーナルコミット待機等の原因特定に活用できる。`args` によりフルコマンドパス+引数を記録する。先頭行にカラムヘッダーを出力する。
+
+### connections（connections_YYYYMMDD.log）
+`ss -tunap` を INTERVAL 秒ごとに実行し、TCP/UDP の全ソケット情報をプロセス付きで記録する。
+
+| カラム | 説明 |
+|---|---|
+| Netid | プロトコル（tcp/udp） |
+| State | ソケット状態（LISTEN/ESTAB/TIME_WAIT 等） |
+| Recv-Q | 受信キューバイト数 |
+| Send-Q | 送信キューバイト数 |
+| Local Address:Port | ローカルアドレス:ポート |
+| Peer Address:Port | 接続先アドレス:ポート（LISTEN時は `*`） |
+| Process | プロセス名と PID |
+
+`-a` オプションで LISTEN 状態も含む全ソケットを出力するため、どのプロセスが何番ポートで待受しているかと、確立済み接続の接続先を一括で把握できる。`ss -s`（netstat ログ）のサマリと合わせて参照する。
+
+### lsof（lsof_YYYYMMDD.log）
+`lsof -n -P` を INTERVAL 秒ごとに実行し、プロセスごとのオープンファイル一覧を記録する。
+
+- **-n**: DNS 逆引きを行わない（高速化）
+- **-P**: ポート番号を名前解決しない（高速化）
+
+主な用途:
+- "too many open files" 障害の原因プロセス特定
+- 削除済みファイルを保持しているプロセスの発見（ディスク残量が戻らない原因調査）
+- ロック中ファイルの確認
+- ネットワーク接続のプロセス別詳細確認
+
+> **注意**: lsof の出力は1スナップショットあたり数千〜数万行になる場合がある。日付ローテーション後は gzip 圧縮されるため、長期保持でもディスク消費は抑えられる。
 
 ### dmesg（dmesg_YYYYMMDD.log）
 `dmesg -w -T` でカーネルのリングバッファ新着メッセージをリアルタイムに追跡する。行頭に収集時刻（gawk 付与）、続いてカーネルイベント発生時刻（`-T` オプション付与）の 2 段のタイムスタンプとなる。OOM Killer 発動・ディスクエラー・ハードウェア障害の記録に使用する。
@@ -191,13 +243,13 @@ cp perfmon.spec ~/rpmbuild/SPECS/
 rpmbuild -bb ~/rpmbuild/SPECS/perfmon.spec
 ```
 
-ビルド成果物は `~/rpmbuild/RPMS/noarch/perfmon-1.2.0-1.*.noarch.rpm` に出力される。
+ビルド成果物は `~/rpmbuild/RPMS/noarch/perfmon-1.3.0-1.*.noarch.rpm` に出力される。
 
 ## インストール・アンインストール
 
 ```bash
 # インストール
-sudo yum localinstall ~/rpmbuild/RPMS/noarch/perfmon-1.2.0-1.*.noarch.rpm
+sudo yum localinstall ~/rpmbuild/RPMS/noarch/perfmon-1.3.0-1.*.noarch.rpm
 
 # 稼働確認
 systemctl status perfmon
