@@ -1,5 +1,5 @@
 Name:           perfmon
-Version:        1.3.0
+Version:        1.3.1
 Release:        1%{?dist}
 Summary:        System performance monitor (CPU/Memory/Disk IO/Network)
 License:        MIT
@@ -45,13 +45,19 @@ systemctl enable perfmon.service >/dev/null 2>&1 || :
 systemctl start perfmon.service >/dev/null 2>&1 || :
 
 %preun
-systemctl stop perfmon.service >/dev/null 2>&1 || :
-systemctl disable perfmon.service >/dev/null 2>&1 || :
+if [ $1 -eq 0 ]; then
+    systemctl stop perfmon.service >/dev/null 2>&1 || :
+    systemctl disable perfmon.service >/dev/null 2>&1 || :
+fi
 
 %postun
 systemctl daemon-reload >/dev/null 2>&1 || :
 
 %changelog
+* Sat Feb 21 2026 hijiri - 1.3.1-1
+- Fix: %preun now only stops/disables service on removal, not on upgrade
+  (previously %preun ran unconditionally, stopping the service just started by %post)
+
 * Sat Feb 21 2026 hijiri - 1.3.0-1
 - top: add -c (full command path + args) and -w 512 (prevent line truncation)
 - pidstat: add -l (full command line with arguments)

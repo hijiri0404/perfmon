@@ -28,7 +28,7 @@ perfmon/
 GitHub Releases からビルド済み RPM を直接インストールできる。
 
 ```bash
-curl -LO https://github.com/hijiri0404/perfmon/releases/download/v1.3.0/perfmon-1.3.0-1.el10.noarch.rpm
+curl -LO https://github.com/hijiri0404/perfmon/releases/download/v1.3.1/perfmon-1.3.1-1.el10.noarch.rpm
 sudo yum localinstall -y perfmon-1.3.0-1.el10.noarch.rpm
 ```
 
@@ -51,13 +51,13 @@ cp perfmon.spec ~/rpmbuild/SPECS/
 rpmbuild -bb ~/rpmbuild/SPECS/perfmon.spec
 ```
 
-成果物: `~/rpmbuild/RPMS/noarch/perfmon-1.3.0-1.*.noarch.rpm`
+成果物: `~/rpmbuild/RPMS/noarch/perfmon-1.3.1-1.*.noarch.rpm`
 
 ## インストール・運用
 
 ```bash
 # インストール（依存パッケージも自動解決）
-sudo yum localinstall ~/rpmbuild/RPMS/noarch/perfmon-1.3.0-1.*.noarch.rpm
+sudo yum localinstall ~/rpmbuild/RPMS/noarch/perfmon-1.3.1-1.*.noarch.rpm
 
 # 稼働確認
 systemctl status perfmon

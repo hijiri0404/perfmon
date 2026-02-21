@@ -243,13 +243,13 @@ cp perfmon.spec ~/rpmbuild/SPECS/
 rpmbuild -bb ~/rpmbuild/SPECS/perfmon.spec
 ```
 
-ビルド成果物は `~/rpmbuild/RPMS/noarch/perfmon-1.3.0-1.*.noarch.rpm` に出力される。
+ビルド成果物は `~/rpmbuild/RPMS/noarch/perfmon-1.3.1-1.*.noarch.rpm` に出力される。
 
 ## インストール・アンインストール
 
 ```bash
 # インストール
-sudo yum localinstall ~/rpmbuild/RPMS/noarch/perfmon-1.3.0-1.*.noarch.rpm
+sudo yum localinstall ~/rpmbuild/RPMS/noarch/perfmon-1.3.1-1.*.noarch.rpm
 
 # 稼働確認
 systemctl status perfmon
