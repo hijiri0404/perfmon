@@ -29,7 +29,7 @@ GitHub Releases からビルド済み RPM を直接インストールできる�
 
 ```bash
 curl -LO https://github.com/hijiri0404/perfmon/releases/download/v1.3.1/perfmon-1.3.1-1.el10.noarch.rpm
-sudo yum localinstall -y perfmon-1.3.0-1.el10.noarch.rpm
+sudo yum localinstall -y perfmon-1.3.1-1.el10.noarch.rpm
 ```
 
 > **注意**: el10 ビルドは AlmaLinux/RHEL 10 向け。他のバージョンはソースから RPM を再ビルドすること。
