@@ -14,6 +14,12 @@ LOG_DIR="${LOG_DIR:-/opt/perfmon/log}"
 
 mkdir -p "$LOG_DIR"
 
+CONFTRACK_SCRIPT=/opt/perfmon/bin/perfmon-conftrack.sh
+if [[ -f "$CONFTRACK_SCRIPT" ]]; then
+    . "$CONFTRACK_SCRIPT"
+    conftrack_init
+fi
+
 # 子プロセスPIDを管理
 CHILD_PIDS=()
 
@@ -32,6 +38,11 @@ trap cleanup SIGTERM SIGINT
 cleanup_old_logs() {
     find "$LOG_DIR" -name '*.log.gz' -mtime +"$RETENTION_DAYS" -delete 2>/dev/null
     find "$LOG_DIR" -name '*.log'    -mtime +"$RETENTION_DAYS" -delete 2>/dev/null
+    local ct_dir="${LOG_DIR}/conftrack"
+    if [[ -d "$ct_dir" ]]; then
+        find "$ct_dir" -name 'diff_*.txt'   -mtime +"$RETENTION_DAYS" -delete 2>/dev/null
+        find "$ct_dir" -name 'master_*.txt' -mtime +90 -delete 2>/dev/null
+    fi
 }
 
 # 前日以前の .log ファイルを gzip 圧縮する
@@ -371,4 +382,6 @@ while true; do
         CURRENT_DATE="$NEW_DATE"
         start_collectors "$CURRENT_DATE"
     fi
+
+    declare -f conftrack_check > /dev/null 2>&1 && conftrack_check
 done

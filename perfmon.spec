@@ -1,5 +1,5 @@
 Name:           perfmon
-Version:        1.3.2
+Version:        1.4.0
 Release:        1%{?dist}
 Summary:        System performance monitor (CPU/Memory/Disk IO/Network)
 License:        MIT
@@ -20,21 +20,25 @@ All log entries are prefixed with timestamps and automatically rotated daily.
 %install
 install -d %{buildroot}/opt/perfmon/bin
 install -d %{buildroot}/opt/perfmon/log
+install -d %{buildroot}/opt/perfmon/log/conftrack
 install -d %{buildroot}/etc/perfmon
 install -d %{buildroot}/usr/lib/systemd/system
 install -d %{buildroot}/usr/bin
 
-install -m 0755 %{_sourcedir}/perfmon-collector.sh %{buildroot}/opt/perfmon/bin/perfmon-collector.sh
-install -m 0755 %{_sourcedir}/perfmon-save.sh      %{buildroot}/usr/bin/perfmon-save
-install -m 0644 %{_sourcedir}/perfmon.conf          %{buildroot}/etc/perfmon/perfmon.conf
-install -m 0644 %{_sourcedir}/perfmon.service       %{buildroot}/usr/lib/systemd/system/perfmon.service
+install -m 0755 %{_sourcedir}/perfmon-collector.sh  %{buildroot}/opt/perfmon/bin/perfmon-collector.sh
+install -m 0755 %{_sourcedir}/perfmon-conftrack.sh  %{buildroot}/opt/perfmon/bin/perfmon-conftrack.sh
+install -m 0755 %{_sourcedir}/perfmon-save.sh       %{buildroot}/usr/bin/perfmon-save
+install -m 0644 %{_sourcedir}/perfmon.conf           %{buildroot}/etc/perfmon/perfmon.conf
+install -m 0644 %{_sourcedir}/perfmon.service        %{buildroot}/usr/lib/systemd/system/perfmon.service
 
 %files
 %dir /opt/perfmon
 %dir /opt/perfmon/bin
 %dir /opt/perfmon/log
+%dir /opt/perfmon/log/conftrack
 %dir /etc/perfmon
 /opt/perfmon/bin/perfmon-collector.sh
+/opt/perfmon/bin/perfmon-conftrack.sh
 /usr/bin/perfmon-save
 %config(noreplace) /etc/perfmon/perfmon.conf
 /usr/lib/systemd/system/perfmon.service
@@ -43,6 +47,17 @@ install -m 0644 %{_sourcedir}/perfmon.service       %{buildroot}/usr/lib/systemd
 systemctl daemon-reload >/dev/null 2>&1 || :
 systemctl enable perfmon.service >/dev/null 2>&1 || :
 systemctl start perfmon.service >/dev/null 2>&1 || :
+
+# conftrack 初回マスター生成（バックグラウンドで実行）
+if [[ -f /opt/perfmon/bin/perfmon-conftrack.sh ]]; then
+    (
+        CONF=/etc/perfmon/perfmon.conf
+        [[ -f "$CONF" ]] && . "$CONF"
+        LOG_DIR="${LOG_DIR:-/opt/perfmon/log}"
+        . /opt/perfmon/bin/perfmon-conftrack.sh
+        conftrack_init
+    ) >> /opt/perfmon/log/conftrack/install.log 2>&1 &
+fi
 
 %preun
 if [ $1 -eq 0 ]; then
@@ -54,6 +69,14 @@ fi
 systemctl daemon-reload >/dev/null 2>&1 || :
 
 %changelog
+* Sat Feb 21 2026 hijiri - 1.4.0-1
+- Add conftrack: system config file change tracking
+- Monthly master snapshot on 1st of month and on install
+- Daily unified diff report against master
+- Add CONFTRACK_* parameters to perfmon.conf
+- Bump RETENTION_DAYS default from 7 to 31
+- New script: /opt/perfmon/bin/perfmon-conftrack.sh
+
 * Sat Feb 21 2026 hijiri - 1.3.2-1
 - Add LSOF_INTERVAL parameter to perfmon.conf (default: 300s)
   lsof collection interval is now independent from INTERVAL

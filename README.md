@@ -12,6 +12,7 @@ perfmon/
 ├── perfmon-design.md          # 詳細設計ドキュメント（引き継ぎ用）
 └── SOURCES/
     ├── perfmon-collector.sh   # 収集スクリプト本体
+    ├── perfmon-conftrack.sh   # 設定ファイル変更追跡モジュール (v1.4.0〜)
     ├── perfmon-save.sh        # ログzip圧縮コマンド
     ├── perfmon.conf           # 設定ファイル
     └── perfmon.service        # systemd ユニットファイル
@@ -28,8 +29,8 @@ perfmon/
 GitHub Releases からビルド済み RPM を直接インストールできる。
 
 ```bash
-curl -LO https://github.com/hijiri0404/perfmon/releases/download/v1.3.2/perfmon-1.3.2-1.el10.noarch.rpm
-sudo yum localinstall -y perfmon-1.3.2-1.el10.noarch.rpm
+curl -LO https://github.com/hijiri0404/perfmon/releases/download/v1.4.0/perfmon-1.4.0-1.el10.noarch.rpm
+sudo yum localinstall -y perfmon-1.4.0-1.el10.noarch.rpm
 ```
 
 > **注意**: el10 ビルドは AlmaLinux/RHEL 10 向け。他のバージョンはソースから RPM を再ビルドすること。
@@ -51,13 +52,13 @@ cp perfmon.spec ~/rpmbuild/SPECS/
 rpmbuild -bb ~/rpmbuild/SPECS/perfmon.spec
 ```
 
-成果物: `~/rpmbuild/RPMS/noarch/perfmon-1.3.2-1.*.noarch.rpm`
+成果物: `~/rpmbuild/RPMS/noarch/perfmon-1.4.0-1.*.noarch.rpm`
 
 ## インストール・運用
 
 ```bash
 # インストール（依存パッケージも自動解決）
-sudo yum localinstall ~/rpmbuild/RPMS/noarch/perfmon-1.3.2-1.*.noarch.rpm
+sudo yum localinstall ~/rpmbuild/RPMS/noarch/perfmon-1.4.0-1.*.noarch.rpm
 
 # 稼働確認
 systemctl status perfmon
@@ -79,8 +80,14 @@ sudo yum remove perfmon
 |---|---|---|
 | INTERVAL | 60 | 収集間隔（秒） |
 | LSOF_INTERVAL | 300 | lsof 収集間隔（秒）。出力が大きいため INTERVAL より長い値を推奨 |
-| RETENTION_DAYS | 7 | ログ保持日数（超過分は自動削除） |
+| RETENTION_DAYS | 31 | ログ保持日数（超過分は自動削除） |
 | LOG_DIR | /opt/perfmon/log | ログ出力先 |
+| CONFTRACK_ENABLED | yes | 設定ファイル変更追跡の有効/無効 |
+| CONFTRACK_DIRS | /etc /var/spool/cron /root /usr/lib/systemd/system | 追跡対象ディレクトリ |
+| CONFTRACK_TIME | 02:00 | マスター生成・差分チェックの実行時刻 (HH:MM) |
+| CONFTRACK_MAX_FILE_SIZE | 524288 | スキップするファイルサイズ上限 (bytes) |
+| CONFTRACK_EXCLUDE_PATHS | /etc/pki:/etc/ssl/certs:... | 追跡除外パス（コロン区切り、glob可） |
+| CONFTRACK_METADATA_ONLY_PATHS | /etc/shadow:/etc/gshadow | 内容非記録・メタデータのみ記録するパス |
 
 設定変更後は `sudo systemctl restart perfmon` で反映。
 `%config(noreplace)` により RPM 更新時に既存設定は上書きされない。
