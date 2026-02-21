@@ -147,6 +147,48 @@ Linux (RHEL) 上で CPU/メモリ/ディスクIO/ネットワークなどのシ�
 ### top（top_YYYYMMDD.log）
 `top -b -c -w 512 -d INTERVAL` でシステム概要とプロセス一覧をスナップショット形式で記録。`-c` でフルコマンドパス+引数を表示し、`-w 512` で行幅を広げて切り捨てを防ぐ。他のログと同様に各行の先頭にタイムスタンプを付与する。スナップショット間は空行で区切る。
 
+各スナップショットは以下の5行のサマリとプロセス一覧で構成される。
+
+**サマリ行**
+
+| 行 | 形式 | 主要フィールド |
+|---|---|---|
+| 1行目 | `top - HH:MM:SS up X days, load average: X, X, X` | 現在時刻・稼働時間・ロードアベレージ（1分/5分/15分） |
+| 2行目 | `Tasks: X total, X running, X sleeping, X stopped, X zombie` | プロセス数の状態別内訳。zombie が増加していないか確認 |
+| 3行目 | `%Cpu(s): X us, X sy, X ni, X id, X wa, X hi, X si, X st` | CPU 使用率の内訳（下表参照） |
+| 4行目 | `MiB Mem: X total, X free, X used, X buff/cache` | 物理メモリの内訳 |
+| 5行目 | `MiB Swap: X total, X free, X used, X avail Mem` | swap の内訳と利用可能メモリ推定値 |
+
+**CPU 使用率内訳（3行目）**
+
+| フィールド | 説明 |
+|---|---|
+| us | ユーザー空間 CPU% |
+| sy | カーネル空間 CPU% |
+| ni | nice 付きプロセスの CPU% |
+| id | アイドル CPU% |
+| wa | IO 待ち CPU%。高い場合はディスク/NFS ボトルネックの可能性 |
+| hi | ハードウェア割り込み CPU% |
+| si | ソフトウェア割り込み CPU% |
+| st | ハイパーバイザーに奪われた CPU%（仮想環境） |
+
+**プロセス一覧カラム**
+
+| カラム | 説明 |
+|---|---|
+| PID | プロセス ID |
+| USER | 実行ユーザー |
+| PR | スケジューリング優先度 |
+| NI | nice 値（-20〜19）。負ほど高優先 |
+| VIRT | 仮想メモリサイズ (KiB) |
+| RES | 物理メモリ使用量 (KiB)。実際のメモリ消費量 |
+| SHR | 共有メモリサイズ (KiB) |
+| S | プロセス状態（R=実行中, S=スリープ, D=IO待ち, Z=ゾンビ） |
+| %CPU | CPU 使用率 |
+| %MEM | 物理メモリ使用率 |
+| TIME+ | 累積 CPU 時間 |
+| COMMAND | コマンドのフルパス + 引数（`-c` オプションにより） |
+
 ### meminfo（meminfo_YYYYMMDD.log）
 `/proc/meminfo` を INTERVAL 秒ごとに読み取り全行にタイムスタンプを付与して記録する。vmstat では取得できない詳細項目（Slab/HugePages/Dirty/CommitLimit 等）を補完する。スナップショット間は空行で区切る。
 
@@ -200,6 +242,32 @@ Linux (RHEL) 上で CPU/メモリ/ディスクIO/ネットワークなどのシ�
 ### netstat（netstat_YYYYMMDD.log）
 `ss -s` を INTERVAL 秒ごとに実行し TCP 接続状態サマリを記録する。`sar -n DEV` が帯域のみを記録するのに対し、こちらは TCP 状態（estab/timewait/orphaned 等）を補完する。スナップショット間は空行で区切る。
 
+出力は2つのブロックで構成される。
+
+**TCP サマリ行**
+
+```
+Total: 155
+TCP:   10 (estab 8, closed 0, orphaned 0, timewait 0)
+```
+
+| フィールド | 説明 |
+|---|---|
+| Total | 全プロトコルのソケット総数 |
+| TCP (estab) | 確立済み TCP 接続数。急増はコネクション過多の兆候 |
+| TCP (closed) | クローズ済みだが未解放のソケット数 |
+| TCP (orphaned) | プロセスに紐付かない孤立ソケット数。増加は TCP スタックのリーク |
+| TCP (timewait) | TIME_WAIT 状態のソケット数。大量発生は短命接続が多い証拠 |
+
+**プロトコル別集計テーブル**
+
+| カラム | 説明 |
+|---|---|
+| Transport | プロトコル種別（RAW/UDP/TCP/INET/FRAG） |
+| Total | IPv4 + IPv6 の合計ソケット数 |
+| IP | IPv4 のソケット数 |
+| IPv6 | IPv6 のソケット数 |
+
 ### df（df_YYYYMMDD.log）
 `df -hP`（容量）と `df -iP`（inode）を INTERVAL 秒ごとに実行し同一ファイルに記録する。容量セクションと inode セクションは `--- inode ---` マーカー行で区切る。
 
@@ -228,8 +296,26 @@ Linux (RHEL) 上で CPU/メモリ/ディスクIO/ネットワークなどのシ�
 ### fdcount（fdcount_YYYYMMDD.log）
 `/proc/sys/fs/file-nr` を INTERVAL 秒ごとに読み取り、システム全体の fd 使用数・最大数を記録する。先頭行にカラムヘッダー（`allocated unused max_open`）を出力する。
 
+| カラム | 説明 |
+|---|---|
+| allocated | 現在カーネルが割り当てているファイルハンドル数 |
+| unused | 割り当て済みだが使用されていないファイルハンドル数 |
+| max_open | システム全体の最大ファイルハンドル数（`/proc/sys/fs/file-max`）。RHEL のデフォルトは事実上無制限（9223372036854775807） |
+
+実際の使用数は `allocated - unused` で求まる。`max_open` に近づいた場合はシステム全体で FD が枯渇しているサインだが、RHEL では通常 max_open が非常に大きいため、問題になるのはプロセス単位の上限（`ulimit -n`）であることが多い。
+
 ### dstate（dstate_YYYYMMDD.log）
 `ps -eo pid,ppid,stat,wchan:20,args` をフィルタリングし D 状態（uninterruptible sleep）のプロセスのみを記録する。top と同じ 60 秒間隔のスナップショットだが、D 状態プロセスのみを専用ファイルに集約することで障害調査時に即座に参照できる。`wchan` でどのカーネル関数で待機中かも記録するため、NFS 待機・ジャーナルコミット待機等の原因特定に活用できる。`args` によりフルコマンドパス+引数を記録する。先頭行にカラムヘッダーを出力する。
+
+| カラム | 説明 |
+|---|---|
+| PID | プロセス ID |
+| PPID | 親プロセス ID |
+| STAT | プロセス状態。`D` = uninterruptible sleep（IO待ちで割り込み不可）、`D+` = フォアグラウンドの D 状態 |
+| WCHAN | カーネル内の待機関数名。`msleep`=タイマー待機、`usb_start_wait_urb`=USB IO待機、`nfs_wait_*`=NFS 待機 等 |
+| COMMAND | フルコマンドパス + 引数（`args` により） |
+
+D 状態が長時間継続する場合（数分以上）、ディスク IO ハング・NFS サーバー無応答・カーネルデッドロックの可能性がある。WCHAN で待機先カーネル関数を確認し、原因デバイス・サービスを特定する。
 
 ### connections（connections_YYYYMMDD.log）
 `ss -tunap` を INTERVAL 秒ごとに実行し、TCP/UDP の全ソケット情報をプロセス付きで記録する。
@@ -252,9 +338,23 @@ Linux (RHEL) 上で CPU/メモリ/ディスクIO/ネットワークなどのシ�
 - **-n**: DNS 逆引きを行わない（高速化）
 - **-P**: ポート番号を名前解決しない（高速化）
 
+| カラム | 説明 |
+|---|---|
+| COMMAND | コマンド名（先頭15文字） |
+| PID | プロセス ID |
+| TID | スレッド ID（スレッド単位のエントリの場合） |
+| TASKCMD | スレッドのタスク名 |
+| USER | 実行ユーザー |
+| FD | ファイルディスクリプタの種別と番号。`cwd`=カレントディレクトリ、`rtd`=ルートディレクトリ、`txt`=実行ファイル、`mem`=メモリマップファイル、`数字r/w/u`=番号付きFD（r=読み取り、w=書き込み、u=読み書き） |
+| TYPE | ファイル種別。`REG`=通常ファイル、`DIR`=ディレクトリ、`IPv4/IPv6`=ソケット、`FIFO`=パイプ、`CHR`=キャラクタデバイス |
+| DEVICE | デバイス番号（メジャー,マイナー） |
+| SIZE/OFF | ファイルサイズまたはオフセット |
+| NODE | inode 番号またはソケット種別 |
+| NAME | ファイルパス・ソケットアドレス・`(deleted)` 等 |
+
 主な用途:
-- "too many open files" 障害の原因プロセス特定
-- 削除済みファイルを保持しているプロセスの発見（ディスク残量が戻らない原因調査）
+- "too many open files" 障害の原因プロセス特定（FD 番号の最大値を確認）
+- 削除済みファイルを保持しているプロセスの発見（NAME に `(deleted)` と表示される）。ディスク残量が戻らない原因調査
 - ロック中ファイルの確認
 - ネットワーク接続のプロセス別詳細確認
 
@@ -262,6 +362,26 @@ Linux (RHEL) 上で CPU/メモリ/ディスクIO/ネットワークなどのシ�
 
 ### dmesg（dmesg_YYYYMMDD.log）
 `dmesg -w -T` でカーネルのリングバッファ新着メッセージをリアルタイムに追跡する。行頭に収集時刻（gawk 付与）、続いてカーネルイベント発生時刻（`-T` オプション付与）の 2 段のタイムスタンプとなる。OOM Killer 発動・ディスクエラー・ハードウェア障害の記録に使用する。
+
+```
+収集時刻                  カーネルイベント発生時刻          メッセージ
+2026-02-21 08:38:07  [Fri Feb 21 08:38:05 2026]  kernel: Out of memory: Kill process ...
+```
+
+障害調査で特に注目すべきキーワード：
+
+| キーワード | 意味 |
+|---|---|
+| `Out of memory` / `OOM` | OOM Killer 発動。Kill されたプロセス名・PID・メモリ使用量が記録される |
+| `oom_kill_process` | OOM によるプロセス強制終了 |
+| `I/O error` | ディスク IO エラー。デバイス名とセクタ番号が記録される |
+| `EXT4-fs error` / `XFS error` | ファイルシステムエラー |
+| `SCSI error` | ストレージコントローラーエラー |
+| `NMI` / `MCE` | ハードウェア障害（NMI=Non-Maskable Interrupt、MCE=Machine Check Exception） |
+| `Call Trace` | カーネルパニックやバグのスタックトレース |
+| `segfault` | プロセスがセグメンテーション違反で異常終了 |
+
+> **注意**: サービス起動直後はカーネルリングバッファ全量（起動からの全メッセージ）を一括出力するため、初回のログサイズが大きくなる。以降は新着メッセージのみ追記される。
 
 ## 起動時平均の除外
 
