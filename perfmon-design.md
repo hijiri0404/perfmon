@@ -150,11 +150,80 @@ Linux (RHEL) 上で CPU/メモリ/ディスクIO/ネットワークなどのシ�
 ### meminfo（meminfo_YYYYMMDD.log）
 `/proc/meminfo` を INTERVAL 秒ごとに読み取り全行にタイムスタンプを付与して記録する。vmstat では取得できない詳細項目（Slab/HugePages/Dirty/CommitLimit 等）を補完する。スナップショット間は空行で区切る。
 
+障害調査で特に参照頻度が高い項目を以下に示す。
+
+**基本メモリ**
+
+| フィールド | 説明 |
+|---|---|
+| MemTotal | 物理メモリ合計 (kB) |
+| MemFree | 未使用メモリ (kB)。低くても MemAvailable が十分なら問題なし |
+| MemAvailable | アプリが実際に利用可能なメモリの推定値 (kB)。キャッシュの解放分を含む |
+| Buffers | ブロックデバイスのバッファキャッシュ (kB) |
+| Cached | ページキャッシュ (kB)。MemAvailable の算出に含まれる |
+| SwapCached | swap に書き出されたがメモリにも残っているページ (kB) |
+
+**スワップ**
+
+| フィールド | 説明 |
+|---|---|
+| SwapTotal | swap 合計 (kB) |
+| SwapFree | 空き swap (kB)。減少傾向がある場合はメモリ不足のサイン |
+
+**メモリ逼迫の指標**
+
+| フィールド | 説明 |
+|---|---|
+| Dirty | ディスクへの書き込み待ちページ (kB)。高い場合は IO ボトルネックの可能性 |
+| Writeback | 現在ディスクへ書き込み中のページ (kB) |
+| CommitLimit | オーバーコミットを考慮したメモリ割り当て上限 (kB) |
+| Committed_AS | プロセスが要求済みの仮想メモリ合計 (kB)。CommitLimit を超えると新規割り当て失敗 |
+
+**カーネルメモリ・Slab**
+
+| フィールド | 説明 |
+|---|---|
+| Slab | カーネルのデータ構造キャッシュ合計 (kB) |
+| SReclaimable | 解放可能な Slab (kB)。ページキャッシュ同様に回収される |
+| SUnreclaim | 解放不可の Slab (kB)。増加し続ける場合はカーネルリークの可能性 |
+| KernelStack | カーネルスタック使用量 (kB)。スレッド数に比例して増加 |
+| PageTables | ページテーブルの使用メモリ (kB) |
+
+**HugePages**
+
+| フィールド | 説明 |
+|---|---|
+| HugePages_Total | 静的 HugePage の総ページ数 |
+| HugePages_Free | 未使用の静的 HugePage 数 |
+| AnonHugePages | THP（Transparent HugePages）の使用量 (kB) |
+
 ### netstat（netstat_YYYYMMDD.log）
 `ss -s` を INTERVAL 秒ごとに実行し TCP 接続状態サマリを記録する。`sar -n DEV` が帯域のみを記録するのに対し、こちらは TCP 状態（estab/timewait/orphaned 等）を補完する。スナップショット間は空行で区切る。
 
 ### df（df_YYYYMMDD.log）
 `df -hP`（容量）と `df -iP`（inode）を INTERVAL 秒ごとに実行し同一ファイルに記録する。容量セクションと inode セクションは `--- inode ---` マーカー行で区切る。
+
+**容量セクション（df -hP）**
+
+| カラム | 説明 |
+|---|---|
+| Filesystem | デバイス名またはファイルシステム名 |
+| Size | 合計容量 |
+| Used | 使用済み容量 |
+| Avail | 利用可能容量 |
+| Use% | 使用率（%）。85〜90% を超えたら要注意 |
+| Mounted on | マウントポイント |
+
+**inode セクション（df -iP）**
+
+| カラム | 説明 |
+|---|---|
+| Filesystem | デバイス名またはファイルシステム名 |
+| Inodes | inode 合計数 |
+| IUsed | 使用済み inode 数 |
+| IFree | 空き inode 数 |
+| IUse% | inode 使用率（%）。小さいファイルを大量生成する用途では容量より先に枯渇することがある |
+| Mounted on | マウントポイント |
 
 ### fdcount（fdcount_YYYYMMDD.log）
 `/proc/sys/fs/file-nr` を INTERVAL 秒ごとに読み取り、システム全体の fd 使用数・最大数を記録する。先頭行にカラムヘッダー（`allocated unused max_open`）を出力する。
